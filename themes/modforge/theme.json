@@ -1,0 +1,11 @@
+{
+  "id": "modforge",
+  "name": "ModForge",
+  "version": "1.0.0",
+  "description": "A cinematic Azuriom theme for a modded Minecraft project with SkinAPI, Shop, and FAQ integrations.",
+  "url": "https://example.com/modforge",
+  "authors": [
+    "OpenAI"
+  ],
+  "azuriom_api": "1.2.0"
+}

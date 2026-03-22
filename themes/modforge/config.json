@@ -1,0 +1,21 @@
+{
+  "accent_color": "#72f1b8",
+  "hero_server_ip": "play.modforge.gg",
+  "hero_server_version": "Minecraft 1.20.1 Forge",
+  "discord_url": "https://discord.gg/modforge",
+  "support_email": "support@modforge.gg",
+  "cta_primary_label": "Начать приключение",
+  "cta_primary_url": "/register",
+  "cta_secondary_label": "Открыть магазин",
+  "cta_secondary_url": "/shop",
+  "feature_one_title": "Техно-магическая сборка",
+  "feature_one_text": "Собственная модовая сборка с квестами, данжами и автоматизацией.",
+  "feature_two_title": "Прозрачный донат",
+  "feature_two_text": "Магазин с наборами, кейсами и сезонными предложениями без pay-to-win перегибов.",
+  "feature_three_title": "Быстрый саппорт",
+  "feature_three_text": "FAQ, SkinAPI и служба поддержки связаны в единый пользовательский путь.",
+  "faq_intro": "Ответы на частые вопросы по запуску лаунчера, привязке скина и покупкам.",
+  "shop_intro": "Наборы, привилегии и бустеры для комфортной игры на сервере.",
+  "skin_intro": "Загружайте HD-скины и плащи, чтобы выделиться среди игроков.",
+  "launcher_download_url": "https://example.com/launcher"
+}
