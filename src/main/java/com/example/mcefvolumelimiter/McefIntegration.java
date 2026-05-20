@@ -1,12 +1,9 @@
 package com.example.mcefvolumelimiter;
 
-import org.cef.CefApp;
-import org.cef.CefClient;
-import org.cef.browser.CefBrowser;
-import org.cef.handler.CefLoadHandlerAdapter;
-
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Map;
 
 public final class McefIntegration {
@@ -17,6 +14,7 @@ public final class McefIntegration {
     public static void detectAndHook() {
         try {
             Class.forName("net.montoyo.mcef.MCEF");
+            Class.forName("org.cef.CefApp");
             mcefPresent = true;
             McefVolumeLimiterMod.LOGGER.info("MCEF detected. Installing hooks.");
             hookKnownClients();
@@ -31,16 +29,16 @@ public final class McefIntegration {
         return mcefPresent;
     }
 
-    @SuppressWarnings("unchecked")
     private static void hookKnownClients() {
         try {
-            CefApp app = CefApp.getInstance();
-            Field f = CefApp.class.getDeclaredField("clients_");
-            f.setAccessible(true);
-            Object val = f.get(app);
-            if (val instanceof Map) {
-                for (Object c : ((Map<?, ?>) val).values()) {
-                    if (c instanceof CefClient) attachLoadHook((CefClient) c);
+            Class<?> cefAppClass = Class.forName("org.cef.CefApp");
+            Object app = cefAppClass.getMethod("getInstance").invoke(null);
+            Field clientsField = cefAppClass.getDeclaredField("clients_");
+            clientsField.setAccessible(true);
+            Object value = clientsField.get(app);
+            if (value instanceof Map) {
+                for (Object client : ((Map<?, ?>) value).values()) {
+                    attachLoadHook(client);
                 }
             }
         } catch (Throwable t) {
@@ -51,25 +49,37 @@ public final class McefIntegration {
 
     private static void tryFallbackCreateHook() {
         try {
-            Method m = CefApp.class.getMethod("createClient");
-            CefClient client = (CefClient) m.invoke(CefApp.getInstance());
+            Class<?> cefAppClass = Class.forName("org.cef.CefApp");
+            Object app = cefAppClass.getMethod("getInstance").invoke(null);
+            Object client = cefAppClass.getMethod("createClient").invoke(app);
             attachLoadHook(client);
         } catch (Throwable t) {
             if (ModConfig.debug) McefVolumeLimiterMod.LOGGER.warn("Failed fallback CEF hook", t);
         }
     }
 
-    private static void attachLoadHook(CefClient client) {
+    private static void attachLoadHook(Object client) {
         if (client == null) return;
         try {
-            client.addLoadHandler(new CefLoadHandlerAdapter() {
-                @Override
-                public void onLoadEnd(CefBrowser browser, org.cef.browser.CefFrame frame, int httpStatusCode) {
-                    BrowserTracker.registerBrowser(browser);
-                    BrowserTracker.injectInto(browser);
-                }
-            });
-            if (ModConfig.debug) McefVolumeLimiterMod.LOGGER.info("Attached CefLoadHandler hook to client " + client);
+            Class<?> loadHandlerClass = Class.forName("org.cef.handler.CefLoadHandler");
+            Object proxy = Proxy.newProxyInstance(
+                    loadHandlerClass.getClassLoader(),
+                    new Class<?>[]{loadHandlerClass},
+                    new InvocationHandler() {
+                        @Override
+                        public Object invoke(Object p, Method method, Object[] args) {
+                            if ("onLoadEnd".equals(method.getName()) && args != null && args.length > 0) {
+                                Object browser = args[0];
+                                BrowserTracker.registerBrowser(browser);
+                                BrowserTracker.injectInto(browser);
+                            }
+                            return null;
+                        }
+                    }
+            );
+            Method addLoadHandler = client.getClass().getMethod("addLoadHandler", loadHandlerClass);
+            addLoadHandler.invoke(client, proxy);
+            if (ModConfig.debug) McefVolumeLimiterMod.LOGGER.info("Attached load hook to client " + client);
         } catch (Throwable t) {
             if (ModConfig.debug) McefVolumeLimiterMod.LOGGER.warn("Failed attaching load hook", t);
         }

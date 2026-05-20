@@ -30,10 +30,6 @@ repositories {
     maven { url = 'https://jitpack.io' }
 }
 
-dependencies {
-    compileOnly files('libs/mcef-1.12.2-1.11.jar')
-}
-
 processResources {
     inputs.property 'version', project.version
     inputs.property 'mcversion', '1.12.2'
