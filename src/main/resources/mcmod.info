@@ -1,0 +1,17 @@
+[
+  {
+    "modid": "mcef_volume_limiter",
+    "name": "MCEF Volume Limiter",
+    "description": "Client-side global volume limiter for all MCEF browsers. Clamps HTML media volume on any loaded website.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["example"],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": [],
+    "clientSideOnly": false
+  }
+]
