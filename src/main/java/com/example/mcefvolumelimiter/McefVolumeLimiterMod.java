@@ -5,9 +5,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import net.minecraftforge.fml.relauncher.Side;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = McefVolumeLimiterMod.MOD_ID, name = McefVolumeLimiterMod.MOD_NAME, version = McefVolumeLimiterMod.VERSION, clientSideOnly = true)
+@Mod(modid = McefVolumeLimiterMod.MOD_ID, name = McefVolumeLimiterMod.MOD_NAME, version = McefVolumeLimiterMod.VERSION, clientSideOnly = false)
 public class McefVolumeLimiterMod {
     public static final String MOD_ID = "mcef_volume_limiter";
     public static final String MOD_NAME = "MCEF Volume Limiter";
@@ -27,8 +29,15 @@ public class McefVolumeLimiterMod {
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
-        ClientCommandMcefVolume.register();
-        ModKeyBindings.register();
-        MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
+        if (event.getSide() == Side.CLIENT) {
+            ClientCommandMcefVolume.register();
+            ModKeyBindings.register();
+            MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
+        }
+    }
+
+    @EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        // no-op
     }
 }

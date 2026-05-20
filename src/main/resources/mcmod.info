@@ -12,6 +12,6 @@
     "logoFile": "",
     "screenshots": [],
     "dependencies": [],
-    "clientSideOnly": true
+    "clientSideOnly": false
   }
 ]

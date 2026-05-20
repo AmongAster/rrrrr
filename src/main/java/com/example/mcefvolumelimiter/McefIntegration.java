@@ -84,4 +84,27 @@ public final class McefIntegration {
             if (ModConfig.debug) McefVolumeLimiterMod.LOGGER.warn("Failed attaching load hook", t);
         }
     }
+
+
+    public static void openDisplayClient(String url) {
+        if (!mcefPresent) {
+            ChatUtils.msg("MCEF is not available on client.");
+            return;
+        }
+        try {
+            Class<?> api = Class.forName("net.montoyo.mcef.api.API");
+            Method getAPI = Class.forName("net.montoyo.mcef.MCEF").getMethod("getAPI");
+            Object apiInstance = getAPI.invoke(null);
+            if (apiInstance == null) {
+                ChatUtils.msg("MCEF API unavailable.");
+                return;
+            }
+            Method open = apiInstance.getClass().getMethod("openBrowser", String.class);
+            open.invoke(apiInstance, url);
+        } catch (Throwable t) {
+            ChatUtils.msg("Unable to open display URL.");
+            if (ModConfig.debug) McefVolumeLimiterMod.LOGGER.warn("Open display failed", t);
+        }
+    }
+
 }

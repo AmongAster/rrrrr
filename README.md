@@ -22,3 +22,9 @@ reinjectIntervalTicks=100
 1. Build with Gradle.
 2. Place produced JAR in `mods/` on a Forge 1.12.2 client.
 3. Ensure MCEF is installed.
+
+
+## Web Display Block
+- New block: `web_display`.
+- Right-click opens the stored URL via MCEF on client.
+- Sneak-right-click to change URL requires operator permissions (level 2) and an item with NBT key `mcef_url`.
