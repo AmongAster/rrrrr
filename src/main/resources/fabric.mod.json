@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "musicchat",
+  "version": "${version}",
+  "name": "MusicVChat",
+  "description": "Клиентский аддон Simple Voice Chat: трансляция локальной/сетевой музыки в голосовой чат вместо или вместе с микрофоном.",
+  "authors": ["MusicVChat contributors"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/musicchat/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.example.musicchat.MusicChatClient"],
+    "voicechat": ["com.example.musicchat.svc.MusicVoicechatPlugin"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "voicechat": ">=2.6.0"
+  }
+}
