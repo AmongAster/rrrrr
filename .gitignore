@@ -1,2 +1,9 @@
-*.jar
-libs/
+.classpath
+.project
+.settings/
+bin/
+build/
+out/
+.gradle/
+gradle-app.setting
+voicechat-api-extracted/
