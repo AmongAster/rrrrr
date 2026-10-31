@@ -21,5 +21,6 @@
   },
   "suggests": {
     "voicechat": ">=2.6.0"
-  }
+  },
+  "jars": [{ "file": "META-INF/jars/musicchat-libs.jar" }]
 }

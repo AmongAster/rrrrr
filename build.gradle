@@ -1,6 +1,7 @@
 // build.gradle — MusicVChat (musicchat), Fabric 1.21.11, Java 21
 plugins {
-    id 'fabric-loom'
+    id 'fabric-loom' version "${loom_version}"
+    id 'com.gradleup.shadow' version '8.3.5'
     id 'java'
 }
 
@@ -18,7 +19,7 @@ repositories {
     flatDir { dirs "$rootDir/libs" }
 }
 
-def svcJar = fileTree(dir: 'libs', include: 'voicechat-fabric-*.jar').files.iterator().toList().find { true }
+def svcJar = fileTree(dir: 'libs', include: 'voicechat-fabric-*.jar').files.find { true }
 assert svcJar != null : "Put voicechat-fabric-1.21.11-2.6.27.jar into ./libs (run ./get-voicechat.sh)"
 
 dependencies {
@@ -28,30 +29,24 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // SVC: compileOnly — аддон НЕ требует SVC для загрузки (мягкая деградация).
-    // В рантайме классы api резолвятся из nested voicechat-api.jar пользователя.
+    // В рантайме классы api резолвятся из jar пользователя.
     compileOnly files(svcJar)
 
-    // Audio decoders (pure-Java, relocated + nested via JarJar):
-    implementation('javazoom:jlayer:1.0.1')          { transitive = false } // MP3, LGPL-2.1
-    implementation('org.jcraft:jorbis:0.0.17')       { transitive = false } // OggVorbis, BSD-3
-    implementation('com.googlecode.soundlibs:mp3spi:1.9.5.4') { transitive = false } // unused-but-kept SPI shim? NO -> removed below
+    // Audio decoders (pure-Java, relocated + nested):
+    implementation('javazoom:jlayer:1.0.1')    { transitive = false } // MP3, LGPL-2.1
+    implementation('org.jcraft:jorbis:0.0.17') { transitive = false } // OggVorbis, BSD-3 (зарезервировано под этап FLAC/OGG SPI)
 }
 
-configurations.implementation.dependencies.removeIf { d -> d.name == 'mp3spi' }
-
-// ---- Relocated libs jar (shadow) → nested in META-INF/jars (JarJar-style) ----
-apply plugin: 'com.gradleup.shadow'
-
+// ---- Relocated libs jar (shadow) -> nested in META-INF/jars ----
 tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     archiveClassifier = 'libs'
     configurations = [project.configurations.runtimeClasspath]
-    // Ничего MC/Fabric в runtimeClasspath нет (loom изолирует), но на всякий случай:
     dependencies {
         exclude(dependency('net.fabricmc:.*'))
         exclude(dependency('net.fabricmc.fabric-api:.*'))
         exclude(dependency('com.mojang:.*'))
     }
-    relocate 'javazoom.jl',     'com.example.musicchat.libs.jlayer'
+    relocate 'javazoom.jl',      'com.example.musicchat.libs.jlayer'
     relocate 'org.jcraft.jorbis','com.example.musicchat.libs.jorbis'
     relocate 'org.jcraft.jogg',  'com.example.musicchat.libs.jogg'
     mergeServiceFiles()
@@ -64,54 +59,33 @@ processResources {
     }
 }
 
-// Кладём relocated-jar внутрь remapped мода в META-INF/jars и прописываем его в fabric.mod.json "jars".
-task nestLibs(type: Zip) {
-    dependsOn shadowJar
-    archiveFileName = 'nested.jar'
-    destinationDirectory = file("${buildDir}/tmp-nest")
-    from(zipTree(shadowJar.archiveFile)) {
-        into 'META-INF/jars'
-        rename 'musicchat-.*-libs\\.jar', 'musicchat-libs.jar'
-    }
-}
-
-remapJar {
-    doFirst {
-        def nested = zipTree(nestLibs.archiveFile)
-    }
-}
-
-// Проще: добавляем содержимое shadowJar напрямую в remapJar через loom-ресурсы
-sourceSets.main.resources.srcDir layout.buildDirectory.dir('generated/nested')
-
-task prepareNested {
-    dependsOn shadowJar
-    doLast {
-        def outDir = file("$buildDir/generated/nested/META-INF/jars")
-        outDir.mkdirs()
-        copy {
-            from zipTree(shadowJar.archiveFile)
-            into outDir
-        }
-        // пересобираем single jar из shadow-классов уже внутри META-INF/jars/musicchat-libs.jar
-        delete outDir
-        outDir.mkdirs()
-        ant.zip(destfile: new File(outDir, 'musicchat-libs.jar')) {
-            zipfileset(src: zipTree(shadowJar.archiveFile).dir ?: shadowJar.archiveFile.get().asFile,
-                       prefix: '')
-        }
-    }
-}
-
-classes.dependsOn prepareNested
-processResources.dependsOn prepareNested
-
+// Кладём relocated-jar ВНУТРЬ remapJar как META-INF/jars/musicchat-libs.jar.
+// (shadowJar зависит от classes, поэтому в processResources нельзя — будет цикл;
+//  вместо этого добавляем вложения на этапе remapJar через Zip operations.)
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 21
 }
 
 jar { enabled = false } // используем только remapJar
+
+afterEvaluate {
+    tasks.named('remapJar') {
+        dependsOn shadowJar
+        doLast {
+            def out = archiveFile.get().asFile
+            def nested = new File(buildDir, 'tmp-nested')
+            nested.mkdirs()
+            copy {
+                from shadowJar.archiveFile
+                rename { 'musicchat-libs.jar' }
+                into new File(nested, 'META-INF/jars')
+            }
+            ant.zip(destfile: out, update: true, basedir: nested)
+            logger.lifecycle("Nested ${new File(nested, 'META-INF/jars/musicchat-libs.jar')} into ${out.name}")
+        }
+    }
+}
 
 // Проверка: в релизном джаре нет unrelocated классов библиотек
 tasks.register('verifyRelocation') {
@@ -122,8 +96,10 @@ tasks.register('verifyRelocation') {
         def bad = z.entries().toList().findAll { !it.directory &&
             (it.name.startsWith('javazoom/') || it.name.startsWith('org/jcraft/')) &&
             !it.name.startsWith('META-INF/jars/') }
+        def hasNested = z.entries().toList().any { it.name == 'META-INF/jars/musicchat-libs.jar' }
         z.close()
         if (bad) throw new GradleException("Un-relocated classes found: ${bad*.name.take(10)}")
+        if (!hasNested) throw new GradleException("META-INF/jars/musicchat-libs.jar missing in remapJar output")
         logger.lifecycle('verifyRelocation OK')
     }
 }
