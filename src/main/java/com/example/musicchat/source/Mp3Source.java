@@ -54,8 +54,8 @@ public final class Mp3Source implements AudioSource {
         try {
             Header h = bitstream.readFrame();
             if (h != null) {
-                sampleRate = h.sample_frequency;
-                channels = h.mode == 3 ? 1 : 2;
+                sampleRate = h.sample_frequency();
+                channels = h.mode() == Header.SINGLE_CHANNEL ? 1 : 2;
                 bitstream.closeFrame();
             }
         } catch (Exception ignored) { /* попробуем ещё раз при read */ }
@@ -72,20 +72,22 @@ public final class Mp3Source implements AudioSource {
                 closed = true;
                 return framesDone > 0 ? framesDone : -1;
             }
-            if (sampleRate < 0) { sampleRate = h.sample_frequency; channels = h.mode == 3 ? 1 : 2; }
+            if (sampleRate < 0) { sampleRate = h.sample_frequency(); channels = h.mode() == Header.SINGLE_CHANNEL ? 1 : 2; }
             SampleBuffer sb = (SampleBuffer) decoder.decodeFrame(h, bitstream);
             bitstream.closeFrame();
-            int n = sb.getElementCount();          // samples total (interleaved)
+            // JLayer 1.0.1: SampleBuffer has no getElementCount(); buffer length =
+            // getBufferLength() * channels (interleaved LRLR...).
             int ch = sb.getChannelCount();
+            int frames = sb.getBufferLength();       // per-channel frame count
+            int n = frames * ch;                     // interleaved sample count
             short[] buf = sb.getBuffer();
-            for (int i = 0; i < n && framesDone < maxFrames; ) {
-                for (int c = 0; c < ch && i < n && framesDone < maxFrames; c++, i++) {
-                    out[framesDone * ch + c] = buf[i] / 32768f;
+            for (int f = 0; f < n && framesDone < maxFrames; ) {
+                for (int c = 0; c < ch && f < n && framesDone < maxFrames; c++, f++) {
+                    out[framesDone * ch + c] = buf[f] / 32768f;
                 }
-                if (ch == 1) { /* mono stays mono */ }
                 framesDone++;
             }
-            samplesConsumed += n / Math.max(ch, 1);
+            samplesConsumed += frames;
         }
         return framesDone;
     }

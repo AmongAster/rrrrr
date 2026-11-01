@@ -33,7 +33,7 @@ public final class HlsSource implements AudioSource {
     private AudioSource current; // декодер текущего сегмента
     private long totalSamplesOut;
 
-    public HlsSource(String url) throws IOException {
+    public HlsSource(String url) throws Exception {
         this.playlistUrl = url;
         loadPlaylist(true);
         if (segments.isEmpty()) throw new IOException("no audio segments in m3u8");

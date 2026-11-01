@@ -140,11 +140,14 @@ public final class IcecastSource implements AudioSource {
     static final class IcyMetaStripper extends InputStream {
         private final InputStream in;
         private final int metaint;
-        private int untilMeta = metaint;
+        private final int untilMetaInit; // = metaint, но инициализируется в конструкторе
+        private int untilMeta;
         private final AtomicReference<String> titleRef;
 
         IcyMetaStripper(InputStream in, int metaint, AtomicReference<String> titleRef) {
             this.in = in; this.metaint = metaint; this.titleRef = titleRef;
+            this.untilMetaInit = metaint;
+            this.untilMeta = metaint;
         }
 
         @Override public int read() throws IOException {
