@@ -152,7 +152,7 @@ public final class PlaybackEngine implements AutoCloseable {
         } else if (c instanceof SetVolume v) {
             ModConfig.get().musicVolume = clamp01(v.v());
             ModConfig.save();
-            sendThread.setVolume(clamp01(v.v()));
+            ModConfig.set(ModConfig.get()); // публикация нового AudioMirror-снапшота (громкость)
         } else if (c instanceof SeekTo s) {
             AudioSource a = liveRef.get();
             if (a != null && a.canSeek()) a.seekTo(s.ms());

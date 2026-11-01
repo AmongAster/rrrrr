@@ -28,9 +28,7 @@ public final class MusicChatMod {
     public static final String CATEGORY_ID = MODID + ".music";
 
     /** User-Agent для HTTP-запросов (некоторые Icecast-серверы его требуют). */
-    public static final String USER_AGENT = "MusicVChat/" + VERSION_PLACEHOLDER + " (+SimpleVoiceChat addon)";
-
-    private static final String VERSION_PLACEHOLDER = "0.1.0";
+    public static final String USER_AGENT = "MusicVChat/0.1.0 (+SimpleVoiceChat addon)";
 
     private MusicChatMod() {
     }

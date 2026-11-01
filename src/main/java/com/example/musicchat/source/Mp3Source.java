@@ -54,8 +54,8 @@ public final class Mp3Source implements AudioSource {
         try {
             Header h = bitstream.readFrame();
             if (h != null) {
-                sampleRate = h.sample_frequency;
-                channels = h.mode == 3 ? 1 : 2;
+                sampleRate = h.sample_frequency();
+                channels = h.mode() == Header.SINGLE_CHANNEL ? 1 : 2;
                 bitstream.closeFrame();
             }
         } catch (Exception ignored) { /* попробуем ещё раз при read */ }
@@ -72,7 +72,7 @@ public final class Mp3Source implements AudioSource {
                 closed = true;
                 return framesDone > 0 ? framesDone : -1;
             }
-            if (sampleRate < 0) { sampleRate = h.sample_frequency; channels = h.mode == 3 ? 1 : 2; }
+            if (sampleRate < 0) { sampleRate = h.sample_frequency(); channels = h.mode() == Header.SINGLE_CHANNEL ? 1 : 2; }
             SampleBuffer sb = (SampleBuffer) decoder.decodeFrame(h, bitstream);
             bitstream.closeFrame();
             int n = sb.getElementCount();          // samples total (interleaved)

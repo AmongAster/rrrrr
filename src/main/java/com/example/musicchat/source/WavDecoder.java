@@ -34,7 +34,7 @@ public final class WavDecoder implements AudioSource {
         closeQuietly();
         in = Files.newInputStream(file);
         parseHeader(in);
-        if (seekMs > 0 && !seek(seekMs)) throw new IOException("bad seek");
+        if (seekMs > 0 && !seekTo(seekMs)) throw new IOException("bad seek");
     }
 
     private void parseHeader(InputStream is) throws IOException {
