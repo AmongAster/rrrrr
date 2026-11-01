@@ -157,10 +157,14 @@ public class MusicScreen extends Screen {
 
     public String currentFilter() { return search.getText().toLowerCase(Locale.ROOT); }
 
+    // MC 1.21.11 Yarn: Screen implements ParentElement#mouseClicked(Click, boolean)
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (tracks.mouseClicked(mx, my, button)) return true;
-        return super.mouseClicked(mx, my, button);
+    public boolean mouseClicked(Click click, boolean doubled) {
+        double mx = click.x();
+        double my = click.y();
+        int button = click.buttonInfo().button();
+        if (tracks != null && tracks.mouseClicked(mx, my, button)) return true;
+        return super.mouseClicked(click, doubled);
     }
 
     @Override
@@ -215,8 +219,9 @@ public class MusicScreen extends Screen {
         if (this.client != null) this.client.setScreen(null);
     }
 
-    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    // MC 1.21.11 Yarn: Screen#keyPressed(KeyInput)
+    @Override public boolean keyPressed(KeyInput input) {
+        if (input.getKeycode() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
+        return super.keyPressed(input);
     }
 }

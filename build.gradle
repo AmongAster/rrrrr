@@ -37,19 +37,20 @@ dependencies {
     implementation('org.jcraft:jorbis:0.0.17') { transitive = false } // OggVorbis, BSD-3 (зарезервировано под этап FLAC/OGG SPI)
 }
 
-// ---- Relocated libs jar (shadow) -> nested in META-INF/jars ----
-tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+// ---- Relocated libs jar -> nested in META-INF/jars ----
+// НЕ используем shadowJar: он тянет classes проекта и падает на invokedynamic (looming-классы MC).
+// Вместо него — чистый Copy+Relocate через Jar task с Ant-style patternset relocation невозможен,
+// поэтому кладём ВЛОЖЕННЫЕ джары как есть (Fabric Loader сам изолирует их classloader'ом —
+// конфликта с другими модами нет; relocation не требуется для jlayer/jorbis, т.к. их пакеты уникальны).
+task libsJar(type: Jar) {
     archiveClassifier = 'libs'
-    configurations = [project.configurations.runtimeClasspath]
-    dependencies {
-        exclude(dependency('net.fabricmc:.*'))
-        exclude(dependency('net.fabricmc.fabric-api:.*'))
-        exclude(dependency('com.mojang:.*'))
+    from({ project.configurations.runtimeClasspath.files.collect { zipTree(it) } }) {
+        include 'javazoom/**'
+        include 'org/jcraft/**'
     }
-    relocate 'javazoom.jl',      'com.example.musicchat.libs.jlayer'
-    relocate 'org.jcraft.jorbis','com.example.musicchat.libs.jorbis'
-    relocate 'org.jcraft.jogg',  'com.example.musicchat.libs.jogg'
-    mergeServiceFiles()
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // исключаем всё лишнее из transitive
+    exclude 'META-INF/versions/**'
 }
 
 processResources {
@@ -60,24 +61,26 @@ processResources {
 }
 
 // Кладём relocated-jar ВНУТРЬ remapJar как META-INF/jars/musicchat-libs.jar.
-// (shadowJar зависит от classes, поэтому в processResources нельзя — будет цикл;
-//  вместо этого добавляем вложения на этапе remapJar через Zip operations.)
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 21
 }
 
-jar { enabled = false } // используем только remapJar
+// jar ДОЛЖЕН быть включён — remapJar берёт build/libs/<...>-dev.jar как вход.
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
 
 afterEvaluate {
     tasks.named('remapJar') {
-        dependsOn shadowJar
+        dependsOn libsJar
         doLast {
             def out = archiveFile.get().asFile
             def nested = new File(buildDir, 'tmp-nested')
             nested.mkdirs()
             copy {
-                from shadowJar.archiveFile
+                from libsJar.archiveFile
                 rename { 'musicchat-libs.jar' }
                 into new File(nested, 'META-INF/jars')
             }
@@ -98,7 +101,7 @@ tasks.register('verifyRelocation') {
             !it.name.startsWith('META-INF/jars/') }
         def hasNested = z.entries().toList().any { it.name == 'META-INF/jars/musicchat-libs.jar' }
         z.close()
-        if (bad) throw new GradleException("Un-relocated classes found: ${bad*.name.take(10)}")
+        if (bad) throw new GradleException("Library classes leaked into main jar: ${bad*.name.take(10)}")
         if (!hasNested) throw new GradleException("META-INF/jars/musicchat-libs.jar missing in remapJar output")
         logger.lifecycle('verifyRelocation OK')
     }

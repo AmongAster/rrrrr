@@ -267,6 +267,9 @@ public final class PlaybackEngine implements AutoCloseable {
             };
         } catch (IOException e) {
             throw e;
+        } catch (Exception e) {
+            // HlsSource/IcecastSource могут бросать checked Exception (парсинг плейлиста, таймауты)
+            throw new IOException(e.getMessage(), e);
         }
     }
 
