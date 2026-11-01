@@ -40,9 +40,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class PlaybackEngine implements AutoCloseable {
 
-    /** Команды GUI -> engine-потока (sealed иерархия, immutable). */
+    /** Команды GUI -> engine-потока (sealed иерархия, immutable; Runnable — самовыполняющиеся). */
     private sealed interface Cmd permits SimpleCmd, ToggleCmd, PlayAt, SetVolume, SeekTo,
-            OpenUrl, AddLocalFiles, AddFolder {}
+            OpenUrl, AddLocalFiles, AddFolder, RunnableCmd {}
+    private record RunnableCmd(Runnable body) implements Cmd {}
     private enum SimpleCmd implements Cmd { PLAY_PAUSE, STOP, NEXT, PREV }
     private enum ToggleCmd implements Cmd { SHUFFLE, REPEAT }
     private record PlayAt(int index) implements Cmd {}
@@ -109,6 +110,10 @@ public final class PlaybackEngine implements AutoCloseable {
     public void addLocalFiles(List<Path> files) { queue.add(new AddLocalFiles(files)); }
     public void addFolder(Path folder)          { queue.add(new AddFolder(folder)); }
     public void playAt(int i)                   { queue.add(new PlayAt(i)); }
+    /** Пакетное добавление треков (например, распарсенный M3U/PLS). */
+    public void addTracks(List<com.example.musicchat.playlist.Track> ts) {
+        queue.add(new RunnableCmd(() -> { playlist.addAll(ts); persistAndPublish(); }));
+    }
 
     public void setConnected(boolean connected) {
         // вызывается из SVC event-потоков; safe: только volatile write + publish
@@ -164,6 +169,8 @@ public final class PlaybackEngine implements AutoCloseable {
         } else if (c instanceof AddFolder fo) {
             scanFolder(fo.folder());
             persistAndPublish();
+        } else if (c instanceof RunnableCmd rc) {
+            rc.body().run();
         } else if (c instanceof ToggleCmd t) {
             if (t == ToggleCmd.SHUFFLE) shuffle = !shuffle;
             else repeatMode = (repeatMode + 1) % 3;

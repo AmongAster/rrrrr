@@ -5,6 +5,9 @@ import com.example.musicchat.config.ModConfig;
 import com.example.musicchat.engine.PlaybackEngine;
 import com.example.musicchat.engine.StateSnapshot;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseInput;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
@@ -58,9 +61,9 @@ public class MusicScreen extends Screen {
                 b -> engine.cycleRepeat()).dimensions(cx + 138, top, 60, 20).build());
 
         addDrawableChild(CyclingButtonWidget.<ModConfig.Mode>builder(
-                        m -> Text.translatable("musicchat.option.mode." + m.name().toLowerCase(Locale.ROOT)))
+                        m -> Text.translatable("musicchat.option.mode." + m.name().toLowerCase(Locale.ROOT)),
+                        ModConfig.get().mode)
                 .values(ModConfig.Mode.values())
-                .initially(ModConfig.get().mode)
                 .build(cx - 150, top + 26, 150, 20, Text.translatable("musicchat.option.mode"),
                         (btn, mode) -> { ModConfig.get().mode = mode; ModConfig.save(); }));
 

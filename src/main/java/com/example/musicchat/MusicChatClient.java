@@ -12,6 +12,8 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -33,7 +35,7 @@ public class MusicChatClient implements ClientModInitializer {
                 "key.musicchat.open_gui",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_M,
-                "category.musicchat"));
+                KeyBinding.Category.create(Identifier.of("musicchat", "keys"))));
 
         // Команда /musicchat <open|play|pause|next|prev|stop>
         ClientCommandManager.literal("musicchat")
@@ -41,13 +43,13 @@ public class MusicChatClient implements ClientModInitializer {
                     c.getSource().getClient().setScreen(new MusicScreen());
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("play").executes(c -> act(c, "play")))
-                .then(ClientCommandManager.literal("pause").executes(c -> act(c, "pause")))
-                .then(ClientCommandManager.literal("next").executes(c -> act(c, "next")))
-                .then(ClientCommandManager.literal("prev").executes(c -> act(c, "prev")))
-                .then(ClientCommandManager.literal("stop").executes(c -> act(c, "stop")))
+                .then(ClientCommandManager.literal("play").executes(c -> act(c.getSource(), "play")))
+                .then(ClientCommandManager.literal("pause").executes(c -> act(c.getSource(), "pause")))
+                .then(ClientCommandManager.literal("next").executes(c -> act(c.getSource(), "next")))
+                .then(ClientCommandManager.literal("prev").executes(c -> act(c.getSource(), "prev")))
+                .then(ClientCommandManager.literal("stop").executes(c -> act(c.getSource(), "stop")))
                 .executes(c -> {
-                    c.getSource().sendFeedback(net.minecraft.text.Text.translatable("musicchat.command.usage"));
+                    c.getSource().sendFeedback(Text.translatable("musicchat.command.usage"));
                     return 0;
                 });
 
