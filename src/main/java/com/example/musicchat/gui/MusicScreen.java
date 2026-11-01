@@ -4,12 +4,12 @@ package com.example.musicchat.gui;
 import com.example.musicchat.config.ModConfig;
 import com.example.musicchat.engine.PlaybackEngine;
 import com.example.musicchat.engine.StateSnapshot;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.SliderWidget;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
+import net.minecraft.client.gui.widget.SliderWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
 import javax.swing.JFileChooser;
@@ -28,12 +28,9 @@ import java.util.Locale;
 public class MusicScreen extends Screen {
 
     private final PlaybackEngine engine = PlaybackEngine.INSTANCE;
-    private EditBox search;
-    private EditBox urlBox;
+    private TextFieldWidget search;
+    private TextFieldWidget urlBox;
     private TrackListPanel tracks;
-    private SliderWidget volumeSlider;
-    private SliderWidget balanceSlider;
-    private CycleButton<ModConfig.Mode> modeButton;
     private String lastStatusKey = "";
     private long statusShownUntilMs;
 
@@ -47,75 +44,72 @@ public class MusicScreen extends Screen {
         int cx = this.width / 2;
         int top = 16;
 
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.play"),
-                b -> engine.playPause()).bounds(cx - 150, top, 70, 20).build());
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.stop"),
-                b -> engine.stop()).bounds(cx - 76, top, 50, 20).build());
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.prev"),
-                b -> engine.prev()).bounds(cx - 22, top, 44, 20).build());
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.next"),
-                b -> engine.next()).bounds(cx + 26, top, 44, 20).build());
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.shuffle"),
-                b -> engine.toggleShuffle()).bounds(cx + 74, top, 60, 20).build());
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.repeat"),
-                b -> engine.cycleRepeat()).bounds(cx + 138, top, 60, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.play"),
+                b -> engine.playPause()).dimensions(cx - 150, top, 70, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.stop"),
+                b -> engine.stop()).dimensions(cx - 76, top, 50, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.prev"),
+                b -> engine.prev()).dimensions(cx - 22, top, 44, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.next"),
+                b -> engine.next()).dimensions(cx + 26, top, 44, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.shuffle"),
+                b -> engine.toggleShuffle()).dimensions(cx + 74, top, 60, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.repeat"),
+                b -> engine.cycleRepeat()).dimensions(cx + 138, top, 60, 20).build());
 
-        modeButton = addRenderableWidget(CycleButton.<ModConfig.Mode>builder(
+        addDrawableChild(CyclingButtonWidget.<ModConfig.Mode>builder(
                         m -> Text.translatable("musicchat.option.mode." + m.name().toLowerCase(Locale.ROOT)))
-                .withValues(ModConfig.Mode.values())
-                .withInitialValue(ModConfig.get().mode)
-                .create(cx - 150, top + 26, 150, 20, Text.translatable("musicchat.option.mode"),
+                .values(ModConfig.Mode.values())
+                .initially(ModConfig.get().mode)
+                .build(cx - 150, top + 26, 150, 20, Text.translatable("musicchat.option.mode"),
                         (btn, mode) -> { ModConfig.get().mode = mode; ModConfig.save(); }));
 
-        volumeSlider = addRenderableWidget(new SliderWidget(cx + 4, top + 26, 140, 20,
+        addDrawableChild(new SliderWidget(cx + 4, top + 26, 140, 20,
                 Text.translatable("musicchat.option.volume", (int) (ModConfig.get().musicVolume * 100)),
                 ModConfig.get().musicVolume) {
-            private double v = getValue();
-            @Override public void setValue(double d) { this.v = d; super.setValue(d); }
             @Override protected void updateMessage() {
-                setMessage(Text.translatable("musicchat.option.volume", (int) (v * 100)));
+                setMessage(Text.translatable("musicchat.option.volume", (int) (this.value * 100)));
             }
             @Override protected void applyValue() {
-                engine.setVolume((float) v);
+                engine.setVolume((float) this.value);
             }
         });
-        balanceSlider = addRenderableWidget(new SliderWidget(cx - 150, top + 50, 140, 20,
+        addDrawableChild(new SliderWidget(cx - 150, top + 50, 140, 20,
                 Text.translatable("musicchat.option.balance", (int) (ModConfig.get().micBalance * 100)),
                 ModConfig.get().micBalance) {
-            private double v = getValue();
-            @Override public void setValue(double d) { this.v = d; super.setValue(d); }
             @Override protected void updateMessage() {
-                setMessage(Text.translatable("musicchat.option.balance", (int) (v * 100)));
+                setMessage(Text.translatable("musicchat.option.balance", (int) (this.value * 100)));
             }
             @Override protected void applyValue() {
-                ModConfig.get().micBalance = (float) v;
+                ModConfig.get().micBalance = (float) this.value;
                 ModConfig.save();
             }
         });
 
-        search = new EditBox(this.font, 10, this.height - 96, 180, 18, Text.translatable("musicchat.hint.search"));
-        addRenderableWidget(search);
+        search = new TextFieldWidget(this.textRenderer, 10, this.height - 96, 180, 18,
+                Text.translatable("musicchat.hint.search"));
+        addDrawableChild(search);
 
-        urlBox = new EditBox(this.font, 200, this.height - 96, this.width - 320, 18,
+        urlBox = new TextFieldWidget(this.textRenderer, 200, this.height - 96, Math.max(60, this.width - 320), 18,
                 Text.translatable("musicchat.hint.url"));
-        addRenderableWidget(urlBox);
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.add_url"), b -> {
-            String err = engine.validateUrl(urlBox.getValue());
-            if (err == null) { engine.openAndPlayUrl(urlBox.getValue()); urlBox.setValue(""); }
+        addDrawableChild(urlBox);
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.add_url"), b -> {
+            String err = engine.validateUrl(urlBox.getText());
+            if (err == null) { engine.openAndPlayUrl(urlBox.getText()); urlBox.setText(""); }
             else showToast(err);
-        }).bounds(this.width - 110, this.height - 96, 100, 20).build());
+        }).dimensions(this.width - 110, this.height - 96, 100, 20).build());
 
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.add_files"),
-                b -> pickFiles(false)).bounds(10, this.height - 72, 100, 20).build());
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.add_folder"),
-                b -> pickFiles(true)).bounds(114, this.height - 72, 110, 20).build());
-        addRenderableWidget(Button.builder(Text.translatable("musicchat.button.close"),
-                b -> onClose()).bounds(this.width - 90, this.height - 72, 80, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.add_files"),
+                b -> pickFiles(false)).dimensions(10, this.height - 72, 100, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.add_folder"),
+                b -> pickFiles(true)).dimensions(114, this.height - 72, 110, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("musicchat.button.close"),
+                b -> onClose()).dimensions(this.width - 90, this.height - 72, 80, 20).build());
 
         tracks = new TrackListPanel(this, 10, this.height - 50, this.width - 20, 44);
     }
 
-    /** Нативный выбор файлов через Swing JFileChooser на EDT (LWJGL dialogs нет в поставке MC). */
+    /** Выбор файлов через Swing JFileChooser на EDT (LWJGL dialogs нет в поставке MC). */
     private void pickFiles(boolean directories) {
         Thread t = new Thread(() -> {
             final List<Path> chosen = new ArrayList<>();
@@ -136,8 +130,7 @@ public class MusicScreen extends Screen {
                 });
             } catch (Exception e) { return; }
             if (directories && !chosen.isEmpty()) {
-                Path folder = chosen.get(0);
-                engine.addFolder(folder);
+                engine.addFolder(chosen.get(0));
             } else if (!chosen.isEmpty()) {
                 List<Path> files = new ArrayList<>();
                 for (Path p : chosen) {
@@ -146,8 +139,7 @@ public class MusicScreen extends Screen {
                     if (n.endsWith(".m3u") || n.endsWith(".m3u8") || n.endsWith(".pls")) {
                         try (var in = Files.newInputStream(p)) {
                             var ts = com.example.musicchat.net.PlaylistParser.parse(n, in, p.getParent().toString());
-                            // плейлист-файл: добавляем все треки (LOCAL refs уже резолвятся parse'ом)
-                            engine.addPlaylistTracks(ts);
+                            engine.addTracks(ts);
                         } catch (Exception ex) { showToast("musicchat.status.error"); }
                     } else {
                         files.add(p);
@@ -160,7 +152,7 @@ public class MusicScreen extends Screen {
         t.start();
     }
 
-    public String currentFilter() { return search.getValue().toLowerCase(Locale.ROOT); }
+    public String currentFilter() { return search.getText().toLowerCase(Locale.ROOT); }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
@@ -175,7 +167,7 @@ public class MusicScreen extends Screen {
     }
 
     private void onClose() {
-        this.minecraft.setScreen(null);
+        if (this.client != null) this.client.setScreen(null);
     }
 
     private void showToast(String langKey) {
@@ -184,21 +176,21 @@ public class MusicScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext g, int mouseX, int mouseY, float delta) {
         super.render(g, mouseX, mouseY, delta);
         StateSnapshot s = engine.snapshot();
 
         // Now playing + статусы
         String np = s.title().isEmpty() ? trans("musicchat.label.no_track") : s.title();
-        g.drawString(this.font, trans("musicchat.label.now_playing") + " " + np, 10, 8, 0xFFFFFF);
+        g.drawTextWithShadow(this.textRenderer, trans("musicchat.label.now_playing") + " " + np, 10, 8, 0xFFFFFF);
         String extra = s.live() && !s.streamTitle().isEmpty() ? " [" + s.streamTitle() + "]" : "";
-        g.drawString(this.font, fmtPos(s) + extra + (s.starved() ? "  ⚠" : ""), 10, 18, 0xA0A0A0);
-        if (!s.statusKey().isEmpty() || lastStatusKey.equals(s.statusKey())) {
+        g.drawTextWithShadow(this.textRenderer, fmtPos(s) + extra + (s.starved() ? "  !" : ""), 10, 18, 0xA0A0A0);
+        if (!s.statusKey().isEmpty() || !lastStatusKey.isEmpty()) {
             String k = !s.statusKey().isEmpty() ? s.statusKey() : lastStatusKey;
             if (System.currentTimeMillis() < statusShownUntilMs || !s.statusKey().isEmpty())
-                g.drawString(this.font, trans(k), 10, 28, 0xFFC080);
+                g.drawTextWithShadow(this.textRenderer, trans(k), 10, 28, 0xFFC080);
         }
-        tracks.renderWithState(g, s, search.getValue().toLowerCase(Locale.ROOT));
+        tracks.renderWithState(g, s, search.getText().toLowerCase(Locale.ROOT));
     }
 
     private static String fmtPos(StateSnapshot s) {
@@ -213,11 +205,15 @@ public class MusicScreen extends Screen {
     }
     private String trans(String key) { return Text.translatable(key).getString(); }
 
+    @Override public boolean shouldPause() { return false; }
+
+    @Override
+    public void close() {
+        if (this.client != null) this.client.setScreen(null);
+    }
+
     @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
-
-    /** Прокси-метод движка используется для импорта внешних плейлистов. */
-    // (объявлен в PlaybackEngine.addPlaylistTracks)
 }
